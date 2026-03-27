@@ -15,7 +15,7 @@ A simple Python command-line task manager that lets you add tasks with deadlines
 Clone the repository and run the script with Python 3.6+:
 
 ```bash
-git clone https://github.com/your-username/task-manager.git
+git clone https://github.com/getnet21/task-manager.git
 cd task-manager
 
 ##Usage
