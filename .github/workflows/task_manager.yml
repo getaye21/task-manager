@@ -1,0 +1,86 @@
+name: Task Manager
+
+on:
+  workflow_dispatch:
+    inputs:
+      command:
+        description: 'Command to run (add, list, export, done, delete)'
+        required: true
+        default: 'list'
+      description:
+        description: 'Task description (for add)'
+        required: false
+      deadline:
+        description: 'Deadline YYYY-MM-DD (for add)'
+        required: false
+      priority:
+        description: 'Priority (high/medium/low, for add)'
+        required: false
+        default: 'medium'
+      task_id:
+        description: 'Task ID (for done/delete)'
+        required: false
+      format:
+        description: 'Export format (json/csv, for export)'
+        required: false
+      output:
+        description: 'Output file name (for export)'
+        required: false
+  schedule:
+    - cron: '0 9 * * *'   # Runs every day at 9:00 UTC
+
+jobs:
+  run-task-manager:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write   # Allows the workflow to commit changes back
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+
+      - name: Run Task Manager Command
+        id: run
+        run: |
+          if [ "${{ github.event_name }}" = "workflow_dispatch" ]; then
+            COMMAND="${{ github.event.inputs.command }}"
+            case "$COMMAND" in
+              add)
+                python task_manager.py add "${{ github.event.inputs.description }}" \
+                  --deadline "${{ github.event.inputs.deadline }}" \
+                  --priority "${{ github.event.inputs.priority }}"
+                ;;
+              list)
+                python task_manager.py list
+                ;;
+              export)
+                python task_manager.py export --format "${{ github.event.inputs.format }}" \
+                  --output "${{ github.event.inputs.output }}"
+                ;;
+              done)
+                python task_manager.py done "${{ github.event.inputs.task_id }}"
+                ;;
+              delete)
+                python task_manager.py delete "${{ github.event.inputs.task_id }}"
+                ;;
+              *)
+                echo "Unknown command: $COMMAND"
+                exit 1
+                ;;
+            esac
+          else
+            python task_manager.py list
+          fi
+
+      - name: Commit and push changes
+        if: success()
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "github-actions[bot]@users.noreply.github.com"
+          git add tasks.json
+          git diff --quiet && git diff --staged --quiet || git commit -m "Update tasks.json via GitHub Actions"
+          git push
